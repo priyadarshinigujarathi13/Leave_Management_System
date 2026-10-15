@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leave Records | Priya Darshini</title>
+<link rel="stylesheet" href="/leave-style.css">
+</head>
+<body class="page-list">
+<header class="site-header">
+    <a class="brand" href="/leave-home.html">PRIYA DARSHINI<small>LEAVE MANAGEMENT</small></a>
+    <nav class="site-nav">
+        <a href="/leave-home.html">Home</a>
+        <a href="/leave-insert.html">Apply Leave</a>
+        <a class="active" href="/leave-list.html">List Records</a>
+        <a href="/leave-listOne.html">View One</a>
+        <a href="/leave-search.html">Search</a>
+        <a href="/leave-update.html">Update</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="eyebrow">Employee Services</div>
+        <h1>Leave Records</h1>
+        <p>View leave applications saved in the database.</p>
+    </div>
+</section>
+
+<main class="container">
+    <section class="panel">
+        <h2>All Applications</h2>
+        <p>Latest available records from the leave management database.</p>
+        <div class="actions">
+            <button type="button" onclick="loadRecords()">Refresh Records</button>
+            <a class="btn btn-secondary" href="/leave-insert.html">＋ Apply Leave</a>
+        </div>
+        <div id="message" class="message" role="status"></div>
+    </section>
+
+    <section class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Leave Type</th>
+                    <th>Days</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="recordsBody">
+                <tr><td colspan="6">Loading records...</td></tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<footer class="site-footer">© 2026 Priya Darshini | Leave Management System</footer>
+
+<script>
+const recordsBody = document.getElementById("recordsBody");
+const message = document.getElementById("message");
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = "message show " + type;
+}
+
+function addCell(row, value) {
+    const cell = document.createElement("td");
+    cell.textContent = value ?? "";
+    row.appendChild(cell);
+}
+
+async function loadRecords() {
+    recordsBody.innerHTML = '<tr><td colspan="6">Loading records...</td></tr>';
+    message.className = "message";
+
+    try {
+        const response = await fetch("/leaves");
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.message || "Could not load records.");
+        if (!Array.isArray(data) || data.length === 0) {
+            recordsBody.innerHTML = '<tr><td colspan="6">No leave records found.</td></tr>';
+            return;
+        }
+
+        recordsBody.innerHTML = "";
+        data.forEach(item => {
+            const row = document.createElement("tr");
+            addCell(row, item.EMPLOYEE_ID);
+            addCell(row, item.NAME);
+            addCell(row, item.DEPARTMENT);
+            addCell(row, item.TYPE_OF_LEAVE);
+            addCell(row, item.NUMBER_OF_DAYS);
+            addCell(row, item.DESCRIPTION);
+            recordsBody.appendChild(row);
+        });
+    } catch (error) {
+        recordsBody.innerHTML = '<tr><td colspan="6">Unable to load records.</td></tr>';
+        showMessage(error.message + " Check the server.", "error");
+    }
+}
+
+loadRecords();
+</script>
+</body>
+</html>

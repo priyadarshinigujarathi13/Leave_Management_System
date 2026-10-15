@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Records | Priya Darshini</title>
+<link rel="stylesheet" href="/leave-style.css">
+</head>
+<body class="page-search">
+
+<header class="site-header">
+    <a class="brand" href="/leave-home.html">PRIYA DARSHINI<small>LEAVE MANAGEMENT</small></a>
+    <nav class="site-nav">
+        <a href="/leave-home.html">Home</a>
+        <a href="/leave-insert.html">Apply Leave</a>
+        <a href="/leave-list.html">List Records</a>
+        <a href="/leave-listOne.html">View One</a>
+        <a class="active" href="/leave-search.html">Search</a>
+        <a href="/leave-update.html">Update</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="eyebrow">Employee Services</div>
+        <h1>Search Leave Records</h1>
+        <p>Search for an employee's leave record using their ID.</p>
+    </div>
+</section>
+
+<main class="container">
+    <section class="panel">
+        <h2>Search by Employee ID</h2>
+        <form id="searchForm">
+            <div class="field">
+                <label for="employeeId">Employee ID</label>
+                <input id="employeeId" type="number" min="1" required
+                       placeholder="Enter Employee ID">
+            </div>
+            <div class="actions">
+                <button type="submit">Search</button>
+                <button type="reset" class="btn-secondary">Clear</button>
+            </div>
+        </form>
+        <div id="message" class="message" role="status"></div>
+    </section>
+
+    <section class="table-container" id="result" hidden>
+        <h2>Search Result</h2>
+        <table>
+            <tbody id="detailsBody"></tbody>
+        </table>
+    </section>
+</main>
+
+<footer class="site-footer">© 2026 Priya Darshini | Leave Management System</footer>
+
+<script>
+const searchForm = document.getElementById("searchForm");
+const message = document.getElementById("message");
+const result = document.getElementById("result");
+const detailsBody = document.getElementById("detailsBody");
+
+searchForm.addEventListener("reset", () => {
+    message.className = "message";
+    result.hidden = true;
+});
+
+searchForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    result.hidden = true;
+    message.className = "message";
+
+    const id = document.getElementById("employeeId").value.trim();
+
+    try {
+        const response = await fetch("/leaves/" + encodeURIComponent(id));
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.message || "No matching record found.");
+
+        const record = Array.isArray(data) ? data[0] : data;
+        if (!record || !record.EMPLOYEE_ID) throw new Error("No matching record found.");
+
+        detailsBody.innerHTML = "";
+
+        const fields = [
+            ["Employee ID", "EMPLOYEE_ID"],
+            ["Employee Name", "NAME"],
+            ["Department", "DEPARTMENT"],
+            ["Leave Type", "TYPE_OF_LEAVE"],
+            ["Number of Days", "NUMBER_OF_DAYS"],
+            ["Description", "DESCRIPTION"]
+        ];
+
+        fields.forEach(([label, key]) => {
+            const row = document.createElement("tr");
+            const th = document.createElement("th");
+            const td = document.createElement("td");
+            th.textContent = label;
+            td.textContent = record[key] ?? "";
+            row.append(th, td);
+            detailsBody.appendChild(row);
+        });
+
+        result.hidden = false;
+    } catch (error) {
+        message.textContent = error.message;
+        message.className = "message show error";
+    }
+});
+</script>
+</body>
+</html>

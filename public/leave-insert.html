@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply Leave | Priya Darshini</title>
+<link rel="stylesheet" href="/leave-style.css">
+</head>
+<body class="page-insert">
+
+<header class="site-header">
+    <a class="brand" href="/leave-home.html">PRIYA DARSHINI<small>LEAVE MANAGEMENT</small></a>
+    <nav class="site-nav">
+        <a href="/leave-home.html">Home</a>
+        <a class="active" href="/leave-insert.html">Apply Leave</a>
+        <a href="/leave-list.html">List Records</a>
+        <a href="/leave-listOne.html">View One</a>
+        <a href="/leave-search.html">Search</a>
+        <a href="/leave-update.html">Update</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="eyebrow">Employee Services</div>
+        <h1>Apply for Leave</h1>
+        <p>Complete the form to submit your leave application.</p>
+    </div>
+</section>
+
+<main class="container">
+<section class="panel">
+    <h2>Leave Application Details</h2>
+    <p>Select an existing employee or register a new employee.</p>
+
+    <form id="leaveForm">
+        <div class="form-grid">
+            <div class="field">
+                <label for="EMPLOYEE_ID">Employee</label>
+                <select id="EMPLOYEE_ID" required>
+                    <option value="">Loading employees...</option>
+                </select>
+            </div>
+
+            <div class="field new-employee-fields" id="newIdField">
+                <label for="NEW_EMPLOYEE_ID">New Employee ID</label>
+                <input id="NEW_EMPLOYEE_ID" type="number" min="1" step="1"
+                       placeholder="Enter a unique employee ID">
+            </div>
+
+            <div class="field">
+                <label for="NAME">Employee Name</label>
+                <input id="NAME" required readonly placeholder="Select an employee first">
+            </div>
+
+            <div class="field">
+                <label for="DEPARTMENT">Department</label>
+                <input id="DEPARTMENT" required readonly placeholder="Select an employee first">
+            </div>
+
+            <div class="field">
+                <label for="TYPE_OF_LEAVE">Leave Type</label>
+                <select id="TYPE_OF_LEAVE" required>
+                    <option value="">Select leave type</option>
+                    <option>Casual</option>
+                    <option>Sick</option>
+                    <option>Earned</option>
+                    <option>Maternity</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="NUMBER_OF_DAYS">Number of Days</label>
+                <input id="NUMBER_OF_DAYS" type="number" min="1" step="1" required>
+            </div>
+
+            <div class="field full-width">
+                <label for="DESCRIPTION">Reason / Description</label>
+                <textarea id="DESCRIPTION" required
+                          placeholder="Enter reason for leave"></textarea>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit">Submit Application</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+        </div>
+        <div id="message" class="message" role="status" aria-live="polite"></div>
+    </form>
+</section>
+</main>
+
+<footer class="site-footer">© 2026 Priya Darshini | Leave Management System</footer>
+
+<script>
+const form = document.getElementById("leaveForm");
+const employeeSelect = document.getElementById("EMPLOYEE_ID");
+const newIdField = document.getElementById("newIdField");
+const newIdInput = document.getElementById("NEW_EMPLOYEE_ID");
+const nameInput = document.getElementById("NAME");
+const departmentInput = document.getElementById("DEPARTMENT");
+const message = document.getElementById("message");
+
+let employees = [];
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = "message show " + type;
+}
+
+function setNewEmployeeMode(isNew) {
+    newIdField.classList.toggle("visible", isNew);
+    newIdInput.required = isNew;
+    newIdInput.disabled = !isNew;
+    nameInput.readOnly = !isNew;
+    departmentInput.readOnly = !isNew;
+
+    nameInput.placeholder = isNew ? "Enter employee name" : "Auto-filled";
+    departmentInput.placeholder = isNew ? "Enter department" : "Auto-filled";
+
+    if (!isNew) newIdInput.value = "";
+}
+
+function updateEmployeeFields() {
+    const id = employeeSelect.value;
+    const isNew = id === "__new__";
+    setNewEmployeeMode(isNew);
+
+    if (isNew || !id) {
+        nameInput.value = "";
+        departmentInput.value = "";
+        return;
+    }
+
+    const employee = employees.find(e => String(e.EMPLOYEE_ID) === id);
+    nameInput.value = employee ? employee.NAME : "";
+    departmentInput.value = employee ? employee.DEPARTMENT : "";
+}
+
+async function loadEmployees() {
+    try {
+        const response = await fetch("/employees");
+        if (!response.ok) throw new Error("Could not load employees.");
+
+        employees = await response.json();
+        employeeSelect.innerHTML =
+            '<option value="">Select Employee</option>' +
+            '<option value="__new__">+ Register New Employee</option>';
+
+        employees.forEach(employee => {
+            const option = document.createElement("option");
+            option.value = employee.EMPLOYEE_ID;
+            option.textContent = employee.EMPLOYEE_ID + " — " + employee.NAME;
+            employeeSelect.appendChild(option);
+        });
+
+        updateEmployeeFields();
+    } catch (error) {
+        employeeSelect.innerHTML = '<option value="">Could not load employees</option>';
+        showMessage(error.message + " Check the server and database.", "error");
+    }
+}
+
+employeeSelect.addEventListener("change", updateEmployeeFields);
+
+form.addEventListener("reset", () => {
+    setTimeout(() => {
+        message.textContent = "";
+        message.className = "message";
+        updateEmployeeFields();
+    }, 0);
+});
+
+form.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const isNew = employeeSelect.value === "__new__";
+    if (!isNew && !employeeSelect.value) {
+        showMessage("Please select an employee.", "error");
+        return;
+    }
+
+    const payload = {
+        EMPLOYEE_ID: isNew ? newIdInput.value.trim() : employeeSelect.value,
+        NAME: nameInput.value.trim(),
+        DEPARTMENT: departmentInput.value.trim(),
+        TYPE_OF_LEAVE: document.getElementById("TYPE_OF_LEAVE").value,
+        NUMBER_OF_DAYS: document.getElementById("NUMBER_OF_DAYS").value,
+        DESCRIPTION: document.getElementById("DESCRIPTION").value.trim()
+    };
+
+    if (!payload.EMPLOYEE_ID || !payload.NAME || !payload.DEPARTMENT) {
+        showMessage("Please complete all employee details.", "error");
+        return;
+    }
+
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    try {
+        const response = await fetch("/leaves", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Could not save application.");
+
+        showMessage(data.message || "Leave application saved successfully.", "success");
+        form.reset();
+        await loadEmployees();
+    } catch (error) {
+        showMessage(error.message, "error");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Submit Application";
+    }
+});
+
+setNewEmployeeMode(false);
+loadEmployees();
+</script>
+</body>
+</html>

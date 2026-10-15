@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Update Leave | Priya Darshini</title>
+<link rel="stylesheet" href="/leave-style.css">
+</head>
+<body class="page-update">
+
+<header class="site-header">
+    <a class="brand" href="/leave-home.html">PRIYA DARSHINI<small>LEAVE MANAGEMENT</small></a>
+    <nav class="site-nav">
+        <a href="/leave-home.html">Home</a>
+        <a href="/leave-insert.html">Apply Leave</a>
+        <a href="/leave-list.html">List Records</a>
+        <a href="/leave-listOne.html">View One</a>
+        <a href="/leave-search.html">Search</a>
+        <a class="active" href="/leave-update.html">Update</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="eyebrow">Employee Services</div>
+        <h1>Update / Delete Record</h1>
+        <p>Load an existing leave record by Employee ID to edit or delete it.</p>
+    </div>
+</section>
+
+<main class="container">
+    <section class="panel">
+        <h2>Find Existing Record</h2>
+        <form id="findForm">
+            <div class="field">
+                <label for="findId">Employee ID</label>
+                <input id="findId" type="number" min="1" required
+                       placeholder="Enter Employee ID">
+            </div>
+            <div class="actions">
+                <button type="submit">Load Record</button>
+            </div>
+        </form>
+        <div id="message" class="message" role="status"></div>
+    </section>
+
+    <section class="panel" id="editPanel" hidden>
+        <h2>Edit Leave Details</h2>
+        <form id="editForm">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="EMPLOYEE_ID">Employee ID</label>
+                    <input id="EMPLOYEE_ID" readonly required>
+                </div>
+                <div class="field">
+                    <label for="NAME">Employee Name</label>
+                    <input id="NAME" required>
+                </div>
+                <div class="field">
+                    <label for="DEPARTMENT">Department</label>
+                    <input id="DEPARTMENT" required>
+                </div>
+                <div class="field">
+                    <label for="TYPE_OF_LEAVE">Leave Type</label>
+                    <select id="TYPE_OF_LEAVE" required>
+                        <option value="">Select leave type</option>
+                        <option>Casual</option>
+                        <option>Sick</option>
+                        <option>Earned</option>
+                        <option>Maternity</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="NUMBER_OF_DAYS">Number of Days</label>
+                    <input id="NUMBER_OF_DAYS" type="number" min="1" step="1" required>
+                </div>
+                <div class="field full-width">
+                    <label for="DESCRIPTION">Reason / Description</label>
+                    <textarea id="DESCRIPTION" required></textarea>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" id="deleteButton" class="btn-secondary">
+                    Delete Record
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<footer class="site-footer">© 2026 Priya Darshini | Leave Management System</footer>
+
+<script>
+const findForm = document.getElementById("findForm");
+const editForm = document.getElementById("editForm");
+const editPanel = document.getElementById("editPanel");
+const message = document.getElementById("message");
+const deleteButton = document.getElementById("deleteButton");
+
+let loadedEmployeeId = "";
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = "message show " + type;
+}
+
+async function readResponse(response) {
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || "Request failed.");
+    }
+    return data;
+}
+
+findForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    editPanel.hidden = true;
+    message.className = "message";
+
+    const id = document.getElementById("findId").value.trim();
+
+    try {
+        const response = await fetch("/leaves/" + encodeURIComponent(id));
+        const data = await readResponse(response);
+        const record = Array.isArray(data) ? data[0] : data;
+
+        if (!record || !record.EMPLOYEE_ID) {
+            throw new Error("No record found for this Employee ID.");
+        }
+
+        loadedEmployeeId = String(record.EMPLOYEE_ID);
+
+        document.getElementById("EMPLOYEE_ID").value = record.EMPLOYEE_ID ?? "";
+        document.getElementById("NAME").value = record.NAME ?? "";
+        document.getElementById("DEPARTMENT").value = record.DEPARTMENT ?? "";
+        document.getElementById("TYPE_OF_LEAVE").value = record.TYPE_OF_LEAVE ?? "";
+        document.getElementById("NUMBER_OF_DAYS").value = record.NUMBER_OF_DAYS ?? "";
+        document.getElementById("DESCRIPTION").value = record.DESCRIPTION ?? "";
+
+        editPanel.hidden = false;
+        showMessage("Record loaded. You can now update or delete it.", "success");
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+
+editForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!loadedEmployeeId) {
+        showMessage("Load a record before updating.", "error");
+        return;
+    }
+
+    const payload = {
+        NAME: document.getElementById("NAME").value.trim(),
+        DEPARTMENT: document.getElementById("DEPARTMENT").value.trim(),
+        TYPE_OF_LEAVE: document.getElementById("TYPE_OF_LEAVE").value,
+        NUMBER_OF_DAYS: document.getElementById("NUMBER_OF_DAYS").value,
+        DESCRIPTION: document.getElementById("DESCRIPTION").value.trim()
+    };
+
+    try {
+        const response = await fetch("/leaves/" + encodeURIComponent(loadedEmployeeId), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await readResponse(response);
+        showMessage(data.message || "Record updated successfully.", "success");
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+
+deleteButton.addEventListener("click", async () => {
+    if (!loadedEmployeeId) {
+        showMessage("Load a record before deleting.", "error");
+        return;
+    }
+
+    if (!confirm("Are you sure you want to delete this leave record?")) return;
+
+    try {
+        const response = await fetch("/leaves/" + encodeURIComponent(loadedEmployeeId), {
+            method: "DELETE"
+        });
+
+        const data = await readResponse(response);
+        showMessage(data.message || "Record deleted successfully.", "success");
+        editPanel.hidden = true;
+        loadedEmployeeId = "";
+        findForm.reset();
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+</script>
+</body>
+</html>
